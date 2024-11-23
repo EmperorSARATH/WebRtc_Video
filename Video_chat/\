@@ -6,7 +6,6 @@ const WebSocketSignaling = () => {
   const [peerConnection, setPeerConnection] = useState<RTCPeerConnection | null>(null); // WebRTC connection
   const localStream = useRef<MediaStream | null>(null); // Local media stream
   const remoteStream = useRef<MediaStream>(new MediaStream()); // Remote media stream
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
   type SignalMessage = {
     type: 'offer' | 'answer' | 'candidate';
@@ -85,7 +84,6 @@ const WebSocketSignaling = () => {
       event.streams[0].getTracks().forEach((track) => {
         remoteStream.current.addTrack(track);
       });
-
     };
 
     setPeerConnection(pc);
@@ -126,15 +124,10 @@ const WebSocketSignaling = () => {
         audio: true,
       });
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream.current;
-      }
-
-      localStream.current.getTracks().forEach(
-        (track) => {
-          peerConnection.addTrack(track, localStream.current as MediaStream);
-        }
-      );
+      // Add local tracks to peer connection
+      localStream.current.getTracks().forEach((track) => {
+        peerConnection.addTrack(track, localStream.current as MediaStream);
+      });
 
       // Create and send offer
       const offer = await peerConnection.createOffer();
@@ -171,13 +164,15 @@ const WebSocketSignaling = () => {
 
       <button onClick={endCall}>End Call</button>
       <video
-        id='localVideo'
         autoPlay
         muted
-        ref={localVideoRef}
+        ref={(video) => {
+          if (video && localStream.current) {
+            video.srcObject = localStream.current;
+          }
+        }}
       />
       <video
-        id='remoteVideo'
         autoPlay
         ref={(video) => {
           if (video) {
